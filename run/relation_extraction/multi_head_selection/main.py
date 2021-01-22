@@ -23,11 +23,11 @@ def get_args():
     # "cpt/baidu_w2v/sgns.target.word-character.char1-2.dynwin5.thr10.neg5.dim300.iter5"
     # 'cpt/baidu_w2v/w2v.txt'
     parser.add_argument('--embedding_file', type=str,
-                        default='cpt/baidu_w2v/sgns.target.word-character.char1-2.dynwin5.thr10.neg5.dim300.iter5')
+                        default='/home/liuxd/home/download/WordEmbedings/merge_sgns_bigram_char300.txt')
 
     # choice parameters
     parser.add_argument('--entity_type', type=str, default='disease')
-    parser.add_argument('--use_word2vec', type=bool, default=False)
+    parser.add_argument('--use_word2vec', type=bool, default=True)
     parser.add_argument('--use_bert', type=bool, default=False)
     parser.add_argument('--seg_char', type=bool, default=True)
 
@@ -75,6 +75,7 @@ def get_args():
     parser.add_argument('--activation', type=str, default='tanh')
     parser.add_argument('--rel_emb_size', type=int, default=100)
     parser.add_argument('--ent_emb_size', type=int, default=50)
+    parser.add_argument('--warm_up', type=bool, default=True)
     args = parser.parse_args()
     if args.use_word2vec:
         args.cache_data = args.input + '/mhs_word2v_cache_data/'

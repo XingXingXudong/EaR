@@ -17,7 +17,8 @@ from utils.optimizer_util import set_optimizer
 
 logger = logging.getLogger(__name__)
 
-tokenizer = Tokenizer('cpt/bert-base-chinese/vocab.txt', do_lower_case=True)
+# tokenizer = Tokenizer('cpt/bert-base-chinese/vocab.txt', do_lower_case=True)
+tokenizer = Tokenizer('transformer_cpt/bert/vocab.txt', do_lower_case=True)
 
 
 class SPO(tuple):
@@ -59,7 +60,7 @@ class Trainer(object):
 
         self.model = mhs.ERENet(args, word_emb)
         self.model.to(self.device)
-        self.resume(args)
+        # self.resume(args)
         logging.info('total gpu num is {}'.format(self.n_gpu))
 
         if self.n_gpu > 1:
@@ -89,8 +90,9 @@ class Trainer(object):
 
             global_loss = 0.0
 
-            for step, batch in tqdm(enumerate(self.data_loader_choice[u"train"]), mininterval=5,
-                                    desc=u'training at epoch : %d ' % epoch, leave=False, file=sys.stdout):
+            # for step, batch in tqdm(enumerate(self.data_loader_choice[u"train"]), mininterval=5,
+            #                         desc=u'training at epoch : %d ' % epoch, leave=False, file=sys.stdout):
+            for step, batch in enumerate(self.data_loader_choice["train"]):
 
                 loss = self.forward(batch)
 
