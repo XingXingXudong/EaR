@@ -80,7 +80,7 @@ class StackedBRNN(nn.Module):
         padding.
         """
         # Compute sorted sequence lengths
-        lengths = x_mask.data.eq(0).long().sum(1).squeeze()
+        lengths = x_mask.data.eq(0).long().sum(1).squeeze()       # 获取真实的序列长度
         _, idx_sort = torch.sort(lengths, dim=0, descending=True)
         _, idx_unsort = torch.sort(idx_sort, dim=0)
 

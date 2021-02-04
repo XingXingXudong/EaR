@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument('--entity_type', type=str, default='disease')
     parser.add_argument('--use_word2vec', type=bool, default=True)
     parser.add_argument('--use_bert', type=bool, default=False)
-    parser.add_argument('--seg_char', type=bool, default=True)
+    parser.add_argument('--seg_char', type=bool, default=False)
 
     # train parameters
     parser.add_argument('--train_mode', type=str, default="train")
@@ -150,10 +150,12 @@ def bulid_dataset(args, reader, vocab, debug=False):
 def main():
     args = get_args()
     if not os.path.exists(args.output):
-        print('mkdir {}'.format(args.output))
+        # print('mkdir {}'.format(args.output))
+        logging.info('mkdir {}'.format(args.output))
         os.makedirs(args.output)
     if not os.path.exists(args.cache_data):
-        print('mkdir {}'.format(args.cache_data))
+        # print('mkdir {}'.format(args.cache_data))
+        logging.info('mkdir {}'.format(args.cache_data))
         os.makedirs(args.cache_data)
 
     logger.info("** ** * bulid dataset ** ** * ")
@@ -161,9 +163,15 @@ def main():
     vocab = Vocabulary()
 
     eval_examples, data_loaders, word_emb = bulid_dataset(args, reader, vocab, debug=False)
+    # print("eval_examples: ", eval_examples)
+    # print("data_loaders: ", data_loaders)
+
+    train_data_loader, dev_data_loader = data_loaders
+    # train_iter = iter(train_data_loader)
+    # dev_iter = iter(dev_data_loader)
+    # train_one = next(train_iter)
 
     trainer = Trainer(args, data_loaders, eval_examples, word_emb, spo_conf=BAIDU_RELATION)
-
     if args.train_mode == "train":
         trainer.train(args)
     elif args.train_mode == "eval":

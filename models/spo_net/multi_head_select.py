@@ -1,6 +1,7 @@
 # _*_ coding:utf-8 _*_
 import copy
 import warnings
+import logging
 
 import torch
 import torch.nn.functional as F
@@ -39,7 +40,7 @@ class ERENet(nn.Module):
 
     def __init__(self, args, word_emb):
         super(ERENet, self).__init__()
-        print('mhs with w2v')
+        logging.info('mhs with w2v')
 
         if args.activation.lower() == 'relu':
             self.activation = nn.ReLU()
@@ -89,12 +90,14 @@ class ERENet(nn.Module):
 
         rel_encoder = torch.cat((sent_encoder, ent_encoder), dim=2)
 
+        # 多头选择框架
         B, L, H = rel_encoder.size()
         u = self.activation(self.selection_u(rel_encoder)).unsqueeze(1).expand(B, L, L, -1)
         v = self.activation(self.selection_v(rel_encoder)).unsqueeze(2).expand(B, L, L, -1)
         uv = self.activation(self.selection_uv(torch.cat((u, v), dim=-1)))
 
-        selection_logits = torch.einsum('bijh,rh->birj', uv, self.rel_emb.weight)
+        # 解码关系预测
+        selection_logits = torch.einsum('bijh,rh->birj', uv, self.rel_emb.weight)   # b:batch，i，r, j表示第i位置到第j位，对应关系r;
 
         if is_eval:
             return ent_pre, selection_logits
@@ -107,16 +110,29 @@ class ERENet(nn.Module):
             return loss
 
     def masked_BCEloss(self, mask, selection_logits, selection_gold):
+        # print("selection_logits.shape = ", selection_logits.shape)
+        # print('selection_logits.shape = ', selection_gold.shape)
+
+        # print("mask.shape = ", mask.shape)
+        # print("mask.unsqueeze(2).shape = ", mask.unsqueeze(2).shape)
+        # print("mask.unsqueeze(1).shape = ", mask.unsqueeze(1).shape)
+        # print("product: ", (mask.unsqueeze(2) * mask.unsqueeze(1)).unsqueeze(2).shape)
 
         # batch x seq x rel x seq
         selection_mask = (mask.unsqueeze(2) *
                           mask.unsqueeze(1)).unsqueeze(2).expand(-1, -1, len(BAIDU_RELATION), -1)
+        # print("selection_mask.shape = ", selection_mask.shape)
 
         selection_loss = F.binary_cross_entropy_with_logits(selection_logits,
                                                             selection_gold,
                                                             reduction='none')
+        # print("selection_loss.shape = ", selection_loss.shape)
+        # print('selection_loss.shape = ', selection_loss.masked_select(selection_mask).shape)
         selection_loss = selection_loss.masked_select(selection_mask).sum()
+        # print('selection_loss = ', selection_loss)
         selection_loss /= mask.sum()
+        # print('selection_loss = ', selection_loss)
+        # print("selection_mask.sum = ", mask.sum())
         return selection_loss
 
     def entity_decoder(self, bio_mask, emission, max_len):

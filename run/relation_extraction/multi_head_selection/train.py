@@ -15,6 +15,7 @@ from layers.decoders.selection import selection_decode
 from utils.data_util import Tokenizer
 from utils.optimizer_util import set_optimizer
 
+logging.basicConfig(filename='train_multi_head_selection.log', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # tokenizer = Tokenizer('cpt/bert-base-chinese/vocab.txt', do_lower_case=True)
@@ -86,23 +87,16 @@ class Trainer(object):
         patience_stop = 0
         self.model.train()
         step_gap = 20
+
+        tqdm_data = tqdm(desc='Train: ', total=len(self.data_loader_choice['train']))
         for epoch in range(int(args.epoch_num)):
-
-            global_loss = 0.0
-
-            # for step, batch in tqdm(enumerate(self.data_loader_choice[u"train"]), mininterval=5,
-            #                         desc=u'training at epoch : %d ' % epoch, leave=False, file=sys.stdout):
-            for step, batch in enumerate(self.data_loader_choice["train"]):
-
+            ma_loss = 0.0
+            for step, batch in enumerate(self.data_loader_choice['train'], 1):
                 loss = self.forward(batch)
-
-                if step % step_gap == 0:
-                    global_loss += loss
-                    current_loss = global_loss / step_gap
-                    print(
-                        u"step {} / {} of epoch {}, train/loss: {}".format(step, len(self.data_loader_choice["train"]),
-                                                                           epoch, current_loss))
-                    global_loss = 0.0
+                ma_loss += (loss - ma_loss) / step
+                tqdm_data.set_description("epoch: {} ".format(epoch))
+                tqdm_data.set_postfix(step=step, loss=loss)
+                tqdm_data.update()
 
             res_dev = self.eval_data_set("dev")
             if res_dev['f1'] >= best_f1:
@@ -117,6 +111,7 @@ class Trainer(object):
                 patience_stop += 1
             if patience_stop >= args.patience_stop:
                 return
+            tqdm_data.n = 0;
 
     def resume(self, args):
         resume_model_file = args.output + "/pytorch_model.bin"
@@ -155,15 +150,16 @@ class Trainer(object):
         data_loader = self.data_loader_choice[chosen]
         eval_file = self.eval_file_choice[chosen]
         answer_dict = {}
-
-        last_time = time.time()
+        eval_bar = tqdm(desc='Eval: ', total=len(data_loader), leave=True)
         with torch.no_grad():
-            for _, batch in tqdm(enumerate(data_loader), mininterval=5, leave=False, file=sys.stdout):
+            for batch in data_loader:
                 answer_dict_ = self.forward(batch, chosen, eval=True, answer_dict=answer_dict)
                 answer_dict.update(answer_dict_)
-        used_time = time.time() - last_time
-        logging.info('chosen {} took : {} sec'.format(chosen, used_time))
+                eval_bar.update()
         res = self.evaluate(eval_file, answer_dict, chosen)
+        eval_bar.n = 0
+        eval_bar.clear()
+        eval_bar.close()
         self.model.train()
         return res
 
@@ -221,20 +217,16 @@ class Trainer(object):
 
         entity_precision = 100.0 * entity_em / entity_pred_num if entity_pred_num > 0 else 0.
         entity_recall = 100.0 * entity_em / entity_gold_num if entity_gold_num > 0 else 0.
-        entity_f1 = 2 * entity_recall * entity_precision / (entity_recall + entity_precision) if (
-                                                                                                         entity_recall + entity_precision) != 0 else 0.0
+        entity_f1 = 2 * entity_recall * entity_precision / (entity_recall + entity_precision) if (entity_recall + entity_precision) != 0 else 0.0
 
-        print('============================================')
-        print("{}/entity_em: {},\tentity_pred_num&entity_gold_num: {}\t{} ".format(chosen, entity_em, entity_pred_num,
-                                                                                   entity_gold_num))
-        print(
-            "{}/entity_f1: {}, \tentity_precision: {},\tentity_recall: {} ".format(chosen, entity_f1, entity_precision,
-                                                                                   entity_recall))
-        print('============================================')
-        print("{}/em: {},\tpre&gold: {}\t{} ".format(chosen, X, Y, Z))
-        print("{}/f1: {}, \tPrecision: {},\tRecall: {} ".format(chosen, f1 * 100, precision * 100,
-                                                                recall * 100))
-        return {'f1': f1, "recall": recall, "precision": precision}
+        logging.info('============================================')
+        logging.info("{}/entity_em: {},\tentity_pred_num&entity_gold_num: {}\t{} ".format(chosen, entity_em, entity_pred_num, entity_gold_num))
+        logging.info("{}/entity_f1: {}, \tentity_precision: {},\tentity_recall: {} ".format(chosen, entity_f1, entity_precision, entity_recall))
+        logging.info('============================================')
+        logging.info("{}/em: {},\tpre&gold: {}\t{} ".format(chosen, X, Y, Z))
+        logging.info("{}/f1: {}, \tPrecision: {},\tRecall: {} ".format(chosen, f1 * 100, precision * 100, recall * 100))
+        # return {'f1': f1, "recall": recall, "precision": precision}
+        return {'f1': f1, "recall": recall, "precision": precision, 'entity_f1': entity_f1, 'entity_precision': entity_precision, 'entity_recall': entity_recall}
 
 
 def convert_select_contour(eval_file, q_ids, input_ids, ent_logit, rel_logit):

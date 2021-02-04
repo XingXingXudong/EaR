@@ -46,6 +46,11 @@ class Example(object):
         self.entity_list = entity_list
         self.gold_answer = gold_answer
 
+    def __str__(self):
+        return "Example: \n" + json.dumps(self.__dict__, ensure_ascii=False, indent=4)
+
+    __repr__ = __str__
+
 class InputFeature(object):
 
     def __init__(self,
@@ -271,9 +276,13 @@ class SPODataset(Dataset):
             batch_char_ids, batch_word_ids = [], []
             batch_ent_labels, batch_rel_labels = [], []
             for example in examples:
+                # print("example: ", example)
                 # todo maxlen
                 char_ids = [self.char2idx.get(char, 1) for char in example.context]
+                # 句子的字序列和词序列，长度不同，为了对齐，一个词中的每个字，都对应了所在词的idx，这样保证了，char_ids和word_ids的长度一样
+                # 进入模型中，相当与一个词中每个字符都对应了这个词的embedding
                 word_ids = [self.word2idx.get(word, 0) for word in example.text_word for _ in word]
+                # word_ids = [self.word2idx.get(word, 0) for word in example.text_word]
                 if len(char_ids) != len(word_ids):
                     print(example.context)
                     print(char_ids)
@@ -319,10 +328,17 @@ class SPODataset(Dataset):
             batch_char_ids = sequence_padding(batch_char_ids, is_float=False)
             batch_word_ids = sequence_padding(batch_word_ids, is_float=False)
             if not self.is_train:
+                # print("p_ids: ", p_ids)
+                # print("batch_char_ids: ", batch_char_ids)
+                # print("batch_word_ids: ", batch_word_ids)
                 return p_ids, batch_char_ids, batch_word_ids
             else:
                 batch_ent_labels = sequence_padding(batch_ent_labels, is_float=False)
                 batch_rel_labels = select_padding(batch_char_ids, batch_rel_labels, is_float=True,class_num=len(BAIDU_RELATION))
+                # print("batch_char_ids: shape=", batch_char_ids.shape, "\n", batch_char_ids)
+                # print("batch_word_ids: shape=", batch_word_ids.shape, "\n", batch_word_ids)
+                # print("batch_ent_labels: shape=",batch_ent_labels.shape, '\n', batch_ent_labels)
+                # print("batch_rel_labels: shape=",batch_rel_labels.shape, "\n", batch_rel_labels)
                 return batch_char_ids, batch_word_ids, batch_ent_labels, batch_rel_labels
 
         return partial(collate)
@@ -407,6 +423,9 @@ class SPOBERTDataset(Dataset):
             batch_token_ids = sequence_padding(batch_token_ids, is_float=False)
             batch_segment_ids = sequence_padding(batch_segment_ids, is_float=False)
             if not self.is_train:
+                # print("p_ids: ", p_ids)
+                # print("batch_token_ids: ", batch_token_ids)
+                # print("batch_segment_ids: ", batch_segment_ids)
                 return p_ids, batch_token_ids, batch_segment_ids
             else:
                 batch_token_type_ids = sequence_padding(batch_token_type_ids, is_float=False)
@@ -414,7 +433,14 @@ class SPOBERTDataset(Dataset):
                 batch_subject_labels = sequence_padding(batch_subject_labels, padding=np.zeros(2), is_float=True)
                 batch_object_labels = sequence_padding(batch_object_labels, padding=np.zeros((len(BAIDU_RELATION), 2)),
                                                        is_float=True)
+                # print("batch_token_ids: ", batch_token_ids)
+                # print("batch_segment_ids: ", batch_segment_ids)
+                # print("batch_token_type_ids: ", batch_token_type_ids)
+                # print("batch_subject_ids: ", batch_subject_ids)
+                # print("batch_subject_labels: ", batch_subject_labels)
+                # print("batch_object_labels: ", batch_object_labels)
                 return batch_token_ids, batch_segment_ids, batch_token_type_ids, batch_subject_ids, batch_subject_labels, batch_object_labels
+
 
         return partial(collate)
 
