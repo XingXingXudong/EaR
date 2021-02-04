@@ -1,5 +1,7 @@
 # DeepIE: Deep Learning  for Information Extraction 
 
+fork自https://github.com/loujie0822/DeepIE.git
+
 **DeepIE**： 基于深度学习的信息抽取技术（预计2020年8月31日前全部更新完毕）
 
 ## TOP 
