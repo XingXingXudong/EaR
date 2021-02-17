@@ -23,7 +23,7 @@ def get_args():
     # "cpt/baidu_w2v/sgns.target.word-character.char1-2.dynwin5.thr10.neg5.dim300.iter5"
     # 'cpt/baidu_w2v/w2v.txt'
     parser.add_argument('--embedding_file', type=str,
-                        default='/home/liuxd/home/download/WordEmbedings/merge_sgns_bigram_char300.txt')
+                        default='/home/liuxd/download/Embeddings/merge_sgns_bigram_char300.txt')
 
     # choice parameters
     parser.add_argument('--entity_type', type=str, default='disease')

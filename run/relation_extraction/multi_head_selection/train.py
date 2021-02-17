@@ -65,7 +65,7 @@ class Trainer(object):
         logging.info('total gpu num is {}'.format(self.n_gpu))
 
         if self.n_gpu > 1:
-            self.model = nn.DataParallel(self.model.cuda(), device_ids=[0, 1])
+            self.model = nn.DataParallel(self.model.cuda(), device_ids=[0, 1, 2, 3, 4, 5, 6, 7])
 
         train_dataloader, dev_dataloader = data_loaders
         train_eval, dev_eval = examples
