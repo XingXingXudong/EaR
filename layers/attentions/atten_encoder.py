@@ -20,18 +20,25 @@ class VanillaAttention(nn.Module):
 
     def forward(self, q, k, v, mask=None):
         dim_q = list(q.size())
-        b_k, t_k, dim_k = list(k.size())
+        b_k, t_k, dim_k = list(k.size()) # batch, seq_len, token_dim(embeding_dim)
         b_v, t_v, dim_v = list(v.size())
 
         assert (b_k == b_v)  # batch size should be equal
         assert (t_k == t_v)  # times should be equal
 
-        qk = torch.matmul(k, q.unsqueeze(1)).squeeze(2)
+        # 对于一个查询q, 每个key对应的相似度是多少
+        qk = torch.matmul(k, q.unsqueeze(1)).squeeze(2)   # b*t = batch, seq_len, every element in qk is the similarity of key k by the query q.
         # qk.div_(dim_k ** 0.5)
+        # mask掉不需要的相似度
         qk.masked_fill_(mask, -1e30)
+        # 使用softmax归一化相似度
         qk = F.softmax(qk, 1)
 
-        return torch.bmm(qk.unsqueeze(1), v).squeeze(1)  # b,n
+        # 相似度作为权重，计算相应query q的加权和, 表示整个序列的编码，这个编码是关于一个query q的响应。
+        # 一般地，需要作为query的是一系列token，每个token都可以通过上面的方式，得到对另一系列tokens(key, value)的响应，每个响应
+        # 均表示，另一个序列所有的token(key, value)应该如何响应当前的查询token，也就是说当前token该“注意”另一列token中的哪些token（通过
+        # softmax归一化的相似度表示），来生成其新的表示。
+        return torch.bmm(qk.unsqueeze(1), v).squeeze(1)  # b,n(dim)
 
 
 def get_attn_padding_mask(seq_q, seq_k):
